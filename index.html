@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DLP Migration — Stakeholder Dashboard</title>
+  <script>
+    (() => {
+      const param = new URLSearchParams(window.location.search).get("clawpilotTheme");
+      const theme = param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --cp-bg: #f7f4ef;
+      --cp-bg-elevated: #fcfbf8;
+      --cp-surface: #ffffff;
+      --cp-surface-soft: #f5f5f5;
+      --cp-border: #dedede;
+      --cp-border-strong: #919191;
+      --cp-text: #242424;
+      --cp-text-muted: #5c5c5c;
+      --cp-text-soft: #6f6f6f;
+      --cp-accent: #b11f4b;
+      --cp-accent-hover: #9a1a41;
+      --cp-accent-soft: rgba(177, 31, 75, 0.08);
+      --cp-accent-fg: #ffffff;
+      --cp-success: #16a34a;
+      --cp-danger: #dc2626;
+      --cp-warning: #f59e0b;
+      --cp-link: #0078d4;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+      --cp-overlay: rgba(255, 255, 255, 0.8);
+      --cp-panel: rgba(255, 255, 255, 0.86);
+      --cp-panel-strong: rgba(255, 255, 255, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.55);
+      --cp-highlight: rgba(177, 31, 75, 0.12);
+    }
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --cp-bg: #3d3b3a;
+      --cp-bg-elevated: #343231;
+      --cp-surface: #292929;
+      --cp-surface-soft: #2e2e2e;
+      --cp-border: #474747;
+      --cp-border-strong: #5f5f5f;
+      --cp-text: #dedede;
+      --cp-text-muted: #919191;
+      --cp-text-soft: #b0b0b0;
+      --cp-accent: #fd8ea1;
+      --cp-accent-hover: #fb7b91;
+      --cp-accent-soft: rgba(253, 142, 161, 0.14);
+      --cp-accent-fg: #1a1a1a;
+      --cp-success: #4ade80;
+      --cp-danger: #f87171;
+      --cp-warning: #fbbf24;
+      --cp-link: #4da6ff;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+      --cp-overlay: rgba(41, 41, 41, 0.88);
+      --cp-panel: rgba(41, 41, 41, 0.72);
+      --cp-panel-strong: rgba(41, 41, 41, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.04);
+      --cp-highlight: rgba(253, 142, 161, 0.12);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--cp-bg);
+      color: var(--cp-text);
+      min-height: 100vh;
+      padding: 0 0 48px 0;
+    }
+
+    /* HEADER */
+    .header {
+      background: var(--cp-surface);
+      border-bottom: 1px solid var(--cp-border);
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-left { display: flex; align-items: center; gap: 16px; }
+    .header-badge {
+      background: var(--cp-accent);
+      color: var(--cp-accent-fg);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 4px;
+    }
+    .header h1 { font-size: 20px; font-weight: 700; color: var(--cp-text); }
+    .header-meta { font-size: 13px; color: var(--cp-text-muted); }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 600;
+      padding: 4px 12px; border-radius: 20px;
+    }
+    .pill-green { background: rgba(22,163,74,0.1); color: var(--cp-success); }
+    .pill-yellow { background: rgba(245,158,11,0.12); color: var(--cp-warning); }
+    .pill-red { background: rgba(220,38,38,0.1); color: var(--cp-danger); }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+    .theme-toggle {
+      background: var(--cp-surface-soft); border: 1px solid var(--cp-border);
+      border-radius: 8px; padding: 6px 12px; cursor: pointer;
+      font-size: 13px; color: var(--cp-text-muted);
+    }
+    .theme-toggle:hover { border-color: var(--cp-accent); color: var(--cp-accent); }
+
+    /* BANNER */
+    .banner {
+      margin: 24px 32px 0;
+      background: var(--cp-accent-soft);
+      border: 1px solid var(--cp-highlight);
+      border-left: 4px solid var(--cp-accent);
+      border-radius: 0.625rem;
+      padding: 12px 20px;
+      display: flex; align-items: center; gap: 12px;
+      font-size: 13px; color: var(--cp-text);
+    }
+    .banner strong { color: var(--cp-accent); }
+
+    /* SECTION TITLES */
+    .section-title {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--cp-text-muted);
+      margin: 32px 32px 12px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-title::after {
+      content: ''; flex: 1; height: 1px; background: var(--cp-border);
+    }
+
+    /* KPI CARDS */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      padding: 0 32px;
+    }
+    .kpi-card {
+      background: var(--cp-surface);
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 0 2px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.14);
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: var(--cp-border);
+    }
+    .kpi-card.accent::before { background: var(--cp-accent); }
+    .kpi-card.success::before { background: var(--cp-success); }
+    .kpi-card.warning::before { background: var(--cp-warning); }
+    .kpi-card.danger::before { background: var(--cp-danger); }
+    .kpi-card.blue::before { background: var(--cp-link); }
+
+    .kpi-label { font-size: 12px; color: var(--cp-text-muted); margin-bottom: 8px; }
+    .kpi-value { font-size: 32px; font-weight: 700; color: var(--cp-text); line-height: 1; }
+    .kpi-sub { font-size: 12px; color: var(--cp-text-soft); margin-top: 6px; }
+    .kpi-delta {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-size: 12px; font-weight: 600; margin-top: 4px;
+    }
+    .delta-up { color: var(--cp-success); }
+    .delta-down { color: var(--cp-danger); }
+    .delta-neutral { color: var(--cp-text-muted); }
+
+    /* MAIN GRID */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+      padding: 0 32px;
+    }
+    .main-grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px;
+      padding: 0 32px;
+    }
+    .full-width { padding: 0 32px; }
+
+    /* CARD */
+    .card {
+      background: var(--cp-surface);
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      padding: 20px 24px;
+      box-shadow: 0 0 2px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.14);
+    }
+    .card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .card-title { font-size: 14px; font-weight: 700; color: var(--cp-text); display: flex; align-items: center; gap: 8px; }
+    .card-icon { font-size: 16px; }
+    .card-badge {
+      font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px;
+    }
+    .badge-green { background: rgba(22,163,74,0.1); color: var(--cp-success); }
+    .badge-yellow { background: rgba(245,158,11,0.12); color: var(--cp-warning); }
+    .badge-red { background: rgba(220,38,38,0.1); color: var(--cp-danger); }
+    .badge-blue { background: rgba(0,120,212,0.1); color: var(--cp-link); }
+    .badge-gray { background: var(--cp-surface-soft); color: var(--cp-text-muted); border: 1px solid var(--cp-border); }
+
+    /* PROGRESS BAR */
+    .progress-wrap { margin-bottom: 16px; }
+    .progress-header { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+    .progress-bar { height: 10px; background: var(--cp-surface-soft); border-radius: 20px; overflow: hidden; border: 1px solid var(--cp-border); }
+    .progress-fill { height: 100%; border-radius: 20px; transition: width 1s ease; }
+    .fill-accent { background: var(--cp-accent); }
+    .fill-success { background: var(--cp-success); }
+    .fill-warning { background: var(--cp-warning); }
+    .fill-blue { background: var(--cp-link); }
+
+    /* FUNNEL */
+    .funnel-step {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 0; border-bottom: 1px solid var(--cp-border);
+    }
+    .funnel-step:last-child { border-bottom: none; }
+    .funnel-icon { font-size: 18px; width: 32px; text-align: center; }
+    .funnel-info { flex: 1; }
+    .funnel-label { font-size: 13px; font-weight: 600; color: var(--cp-text); }
+    .funnel-bar-wrap { height: 6px; background: var(--cp-surface-soft); border-radius: 20px; margin-top: 4px; }
+    .funnel-bar { height: 100%; border-radius: 20px; background: var(--cp-accent); }
+    .funnel-count { font-size: 16px; font-weight: 700; color: var(--cp-text); min-width: 60px; text-align: right; }
+    .funnel-pct { font-size: 11px; color: var(--cp-text-muted); text-align: right; }
+
+    /* ICM TABLE */
+    .icm-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .icm-table th {
+      text-align: left; padding: 6px 8px; font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.06em; color: var(--cp-text-muted);
+      border-bottom: 1px solid var(--cp-border);
+    }
+    .icm-table td { padding: 8px 8px; border-bottom: 1px solid var(--cp-border); color: var(--cp-text); vertical-align: middle; }
+    .icm-table tr:last-child td { border-bottom: none; }
+    .icm-table tr:hover td { background: var(--cp-accent-soft); }
+    .sev { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+    .sev-1 { background: var(--cp-danger); }
+    .sev-2 { background: var(--cp-warning); }
+    .sev-3 { background: var(--cp-link); }
+
+    /* SENTIMENT */
+    .sentiment-bar-wrap {
+      display: flex; height: 16px; border-radius: 8px; overflow: hidden;
+      margin-bottom: 10px; border: 1px solid var(--cp-border);
+    }
+    .sent-pos { background: var(--cp-success); }
+    .sent-neu { background: var(--cp-warning); }
+    .sent-neg { background: var(--cp-danger); }
+
+    .sentiment-legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+    .feedback-item {
+      display: flex; gap: 12px; padding: 10px 0;
+      border-bottom: 1px solid var(--cp-border);
+      font-size: 13px;
+    }
+    .feedback-item:last-child { border-bottom: none; }
+    .feedback-tag {
+      font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+      white-space: nowrap; height: fit-content; margin-top: 1px;
+    }
+    .tag-issue { background: rgba(220,38,38,0.1); color: var(--cp-danger); }
+    .tag-praise { background: rgba(22,163,74,0.1); color: var(--cp-success); }
+    .tag-request { background: rgba(0,120,212,0.1); color: var(--cp-link); }
+
+    /* CHATTER */
+    .chatter-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 8px 0; border-bottom: 1px solid var(--cp-border); font-size: 13px;
+    }
+    .chatter-row:last-child { border-bottom: none; }
+    .chatter-platform {
+      font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px;
+      background: var(--cp-surface-soft); border: 1px solid var(--cp-border);
+      min-width: 70px; text-align: center; color: var(--cp-text-muted);
+    }
+    .chatter-quote { flex: 1; color: var(--cp-text); font-style: italic; }
+    .chatter-sentiment { font-size: 16px; }
+
+    /* BLOCKER */
+    .blocker-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 0; border-bottom: 1px solid var(--cp-border); font-size: 13px;
+    }
+    .blocker-row:last-child { border-bottom: none; }
+    .blocker-count {
+      min-width: 36px; height: 36px; border-radius: 10px;
+      background: var(--cp-accent-soft); color: var(--cp-accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 700;
+    }
+    .blocker-info { flex: 1; }
+    .blocker-label { font-weight: 600; color: var(--cp-text); }
+    .blocker-sub { font-size: 12px; color: var(--cp-text-muted); margin-top: 2px; }
+    .blocker-status { font-size: 11px; font-weight: 600; }
+
+    /* TREND INDICATOR */
+    .trend { display: flex; align-items: center; gap: 4px; font-size: 12px; }
+    .trend-up-bad { color: var(--cp-danger); }
+    .trend-up-good { color: var(--cp-success); }
+    .trend-down-good { color: var(--cp-success); }
+    .trend-flat { color: var(--cp-text-muted); }
+
+    /* CHART CONTAINER */
+    .chart-wrap { position: relative; height: 180px; }
+
+    /* PLACEHOLDER LABEL */
+    .placeholder-note {
+      text-align: center; padding: 20px;
+      border: 2px dashed var(--cp-border); border-radius: 10px;
+      color: var(--cp-text-muted); font-size: 13px;
+    }
+    .placeholder-note strong { display: block; font-size: 14px; margin-bottom: 4px; color: var(--cp-text-soft); }
+
+    /* WoW TABLE */
+    .wow-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .wow-table th {
+      text-align: center; padding: 6px 8px; font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.06em; color: var(--cp-text-muted);
+      border-bottom: 1px solid var(--cp-border);
+    }
+    .wow-table th:first-child { text-align: left; }
+    .wow-table td { padding: 8px 8px; border-bottom: 1px solid var(--cp-border); text-align: center; }
+    .wow-table td:first-child { text-align: left; font-weight: 600; }
+    .wow-table tr:last-child td { border-bottom: none; }
+    .wow-table tr:hover td { background: var(--cp-accent-soft); }
+
+    /* RESPONSIVE */
+    @media (max-width: 900px) {
+      .main-grid { grid-template-columns: 1fr; }
+      .main-grid-3 { grid-template-columns: 1fr; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .header { flex-direction: column; gap: 12px; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div class="header-badge">War Room</div>
+    <div>
+      <h1>DLP Migration — Stakeholder Dashboard</h1>
+      <div class="header-meta">Weekly Cadence &nbsp;·&nbsp; All Stakeholders &nbsp;·&nbsp; <span id="today-date"></span></div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="pill pill-yellow"><span class="dot"></span> Week 3 of Migration Window</span>
+    <button class="theme-toggle" onclick="toggleTheme()">🌙 Toggle Theme</button>
+  </div>
+</div>
+
+<!-- BANNER -->
+<div class="banner">
+  📌 <span><strong>For Stakeholder Review</strong> — Numbers shown are illustrative. Live data will be populated weekly by each team DRI.</span>
+</div>
+
+<!-- ───── SECTION 1: KPI SUMMARY ───── -->
+<div class="section-title">📊 At-a-Glance — Key Metrics</div>
+<div class="kpi-grid">
+  <div class="kpi-card accent">
+    <div class="kpi-label">Customers Migrated to Purview</div>
+    <div class="kpi-value">1,284</div>
+    <div class="kpi-delta delta-up">▲ +312 <span style="font-weight:400;color:var(--cp-text-muted)">vs last week</span></div>
+    <div class="kpi-sub">of ~6,500 eligible tenants</div>
+  </div>
+  <div class="kpi-card success">
+    <div class="kpi-label">Overall Migration Progress</div>
+    <div class="kpi-value">19.7<span style="font-size:18px">%</span></div>
+    <div class="kpi-delta delta-up">▲ +4.8% <span style="font-weight:400;color:var(--cp-text-muted)">WoW</span></div>
+    <div class="kpi-sub">Target: 50% by end of month</div>
+  </div>
+  <div class="kpi-card warning">
+    <div class="kpi-label">Open ICMs / Escalations</div>
+    <div class="kpi-value">27</div>
+    <div class="kpi-delta delta-up" style="color:var(--cp-danger)">▲ +5 <span style="font-weight:400;color:var(--cp-text-muted)">vs last week</span></div>
+    <div class="kpi-sub">3 Sev 1 · 11 Sev 2 · 13 Sev 3</div>
+  </div>
+  <div class="kpi-card blue">
+    <div class="kpi-label">Portal Banner Impressions</div>
+    <div class="kpi-value">41.2K</div>
+    <div class="kpi-delta delta-up">▲ +6.1K <span style="font-weight:400;color:var(--cp-text-muted)">WoW</span></div>
+    <div class="kpi-sub">Unique customers who saw banner</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Migration Tool Click-Through</div>
+    <div class="kpi-value">8.2<span style="font-size:18px">%</span></div>
+    <div class="kpi-delta delta-up">▲ +1.1% <span style="font-weight:400;color:var(--cp-text-muted)">WoW</span></div>
+    <div class="kpi-sub">3,378 clicks from banner</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Field Sentiment Score</div>
+    <div class="kpi-value">6.4<span style="font-size:18px">/10</span></div>
+    <div class="kpi-delta delta-down" style="color:var(--cp-danger)">▼ -0.3 <span style="font-weight:400;color:var(--cp-text-muted)">WoW</span></div>
+    <div class="kpi-sub">Based on CSM weekly survey</div>
+  </div>
+</div>
+
+<!-- ───── SECTION 2: MIGRATION PROGRESS ───── -->
+<div class="section-title">🚀 Migration Progress</div>
+<div class="main-grid">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="card-icon">📈</span>Migration Velocity — Week over Week</div>
+      <span class="card-badge badge-green">On Track</span>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="velocityChart"></canvas>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="card-icon">🎯</span>Progress by Segment</div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-header"><span>Enterprise (E3/E5)</span><span style="font-weight:700">24%</span></div>
+      <div class="progress-bar"><div class="progress-fill fill-accent" style="width:24%"></div></div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-header"><span>SMB / Business Plans</span><span style="font-weight:700">17%</span></div>
+      <div class="progress-bar"><div class="progress-fill fill-blue" style="width:17%"></div></div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-header"><span>Government / GCC</span><span style="font-weight:700">8%</span></div>
+      <div class="progress-bar"><div class="progress-fill fill-warning" style="width:8%"></div></div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-header"><span>EDU</span><span style="font-weight:700">31%</span></div>
+      <div class="progress-bar"><div class="progress-fill fill-success" style="width:31%"></div></div>
+    </div>
+    <div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--cp-border);">
+      <div class="progress-header" style="margin-bottom:8px;"><strong>Overall</strong><strong>19.7%</strong></div>
+      <div class="progress-bar" style="height:14px"><div class="progress-fill fill-accent" style="width:19.7%"></div></div>
+      <div style="font-size:12px;color:var(--cp-text-muted);margin-top:6px">Target: 50% by June 30</div>
+    </div>
+  </div>
+</div>
+
+<!-- ───── SECTION 3: PORTAL FUNNEL ───── -->
+<div class="section-title">🖥️ Portal Metrics — Migration Funnel</div>
+<div class="main-grid">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="card-icon">🔽</span>Customer Funnel</div>
+      <span class="card-badge badge-gray">This Week</span>
+    </div>
+    <div class="funnel-step">
+      <div class="funnel-icon">👁️</div>
+      <div class="funnel-info">
+        <div class="funnel-label">Saw Migration Banner</div>
+        <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:100%"></div></div>
+      </div>
+      <div><div class="funnel-count">41,200</div><div class="funnel-pct">100%</div></div>
+    </div>
+    <div class="funnel-step">
+      <div class="funnel-icon">🛠️</div>
+      <div class="funnel-info">
+        <div class="funnel-label">Clicked "Start Migration Tool"</div>
+        <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:8.2%"></div></div>
+      </div>
+      <div><div class="funnel-count">3,378</div><div class="funnel-pct">8.2%</div></div>
+    </div>
+    <div class="funnel-step">
+      <div class="funnel-icon">📖</div>
+      <div class="funnel-info">
+        <div class="funnel-label">Clicked "Learn More"</div>
+        <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:14.1%"></div></div>
+      </div>
+      <div><div class="funnel-count">5,809</div><div class="funnel-pct">14.1%</div></div>
+    </div>
+    <div class="funnel-step">
+      <div class="funnel-icon">⚙️</div>
+      <div class="funnel-info">
+        <div class="funnel-label">Started Migration (Tool Launched)</div>
+        <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:5.3%"></div></div>
+      </div>
+      <div><div class="funnel-count">2,184</div><div class="funnel-pct">5.3%</div></div>
+    </div>
+    <div class="funnel-step">
+      <div class="funnel-icon">✅</div>
+      <div class="funnel-info">
+        <div class="funnel-label">Completed Migration to Purview</div>
+        <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:3.1%; background: var(--cp-success)"></div></div>
+      </div>
+      <div><div class="funnel-count" style="color:var(--cp-success)">1,284</div><div class="funnel-pct">3.1%</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="card-icon">📅</span>Weekly Funnel Trend</div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="funnelTrendChart"></canvas>
+    </div>
+    <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--cp-border);">
+      <div style="font-size:12px;color:var(--cp-text-muted);margin-bottom:8px;">Drop-off Insight</div>
+      <div style="font-size:13px;color:var(--cp-text)">~63% who launch the tool do <strong>not</strong> complete. Top reason: policy review step takes too long.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ───── SECTION 4: ESCALATIONS / ICMs ───── -->
+<div class="section-title">🚨 Customer Escalations &amp; ICMs</div>
+<div class="main-grid">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="card-icon">📋</span>Open ICMs — Top Issues</div>
+      <span class="card-badge badge-red">27 Open</span>
+    </div>
+    <table class="icm-table">
+      <thead>
+        <tr>
+          <th>ICM ID</th>
+          <th>Sev</th>
+          <th>Summary</th>
+          <th>Customer</th>
+          <th>Age</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="color:var(--cp-link);font-weight:600">Issue #1</td>
+          <td><span class="sev sev-1"></span>Sev 1</td>
+          <td>DLP policies not enforcing after migration</td>
+          <td>Enterprise Customer A</td>
+          <td>2d</td>
+          <td><span class="card-badge badge-red">Active</span></td>
+        </tr>
+        <tr>
+          <td style="color:var(--cp-link);font-weight:600">Issue #2</td>
+          <td><span class="sev sev-1"></span>Sev 1</td>
+          <td>Endpoint DLP rules missing post-migration</td>
+          <td>Enterprise Customer B</td>
+          <td>4d</td>
+          <td><span class="card-badge badge-yellow">Mitigated</span></td>
+        </tr>
+        <tr>
+          <td style="color:var(--cp-link);font-weight:600">Issue #3</td>
+          <td><span class="sev sev-2"></span>Sev 2</td>
+          <td>Migration tool timeouts for large tenants</td>
+          <td>Enterprise Customer C</td>
+          <td>1d</td>
+          <td><span class="card-badge badge-red">Active</span></td>
+        </tr>
+        <tr>
+          <td style="color:var(--cp-link);font-weight:600">Issue #4</td>
+          <td><span class="sev sev-2"></span>Sev 2</td>
+          <td>Policy parity gap — Teams DLP rules</td>
+          <td>Enterprise Customer D</td>
+          <td>6d</td>
+          <td><span class="card-badge badge-yellow">In Progress</span></td>
+        </tr>
+        <tr>
+          <td style="color:var(--cp-link);font-weight:600">Issue #5</td>
+          <td><span class="sev sev-3"></span>Sev 3</td>
+          <td>UI confusion — migration status unclear</td>
+          <td>Multiple</td>
+          <td>5d</td>
+          <td><span class="card-badge badge-blue">Triaged</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="margin-top:12px;font-size:12px;color:var(--cp-text-muted)">Showing top 5 of 27 open issues</div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="card-icon">📉</span>ICM Volume Trend</div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="icmChart"></canvas>
+    </div>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--cp-border);">
+      <div style="font-size:12px;color:var(--cp-text-muted);margin-bottom:6px;">Top Themes</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        <span class="card-badge badge-red">Policy Parity</span>
+        <span class="card-badge badge-yellow">Perf / Timeouts</span>
+        <span class="card-badge badge-blue">Teams DLP</span>
+        <span class="card-badge badge-gray">UX Confusion</span>
+        <span class="card-badge badge-gray">Licensing</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ───── SECTION 5: FIELD SENTIMENT ───── -->
+<div class="section-title">🎙️ Field Sentiment &amp; Feedback</div>
+<div class="main-grid">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="card-icon">💬</span>CSM / Field Feedback — This Week</div>
+      <span class="card-badge badge-yellow">Mixed</span>
+    </div>
+    <div class="feedback-item">
+      <span class="feedback-tag tag-issue">Issue</span>
+      <span>"Customers are confused about what happens to existing policies after migration — need clearer messaging."</span>
+    </div>
+    <div class="feedback-item">
+      <span class="feedback-tag tag-praise">Praise</span>
+      <span>"The step-by-step migration wizard is much better than expected. Customers completing it are happy."</span>
+    </div>
+    <div class="feedback-item">
+      <span class="feedback-tag tag-request">Request</span>
+      <span>"Need a dry-run / preview mode before committing migration. Several enterprise customers holding off."</span>
+    </div>
+    <div class="feedback-item">
+      <span class="feedback-tag tag-issue">Issue</span>
+      <span>"GCC customers cannot access the migration tool — eligibility check failing incorrectly."</span>
+    </div>
+    <div class="feedback-item">
+      <span class="feedback-tag tag-praise">Praise</span>
+      <span>"Docs team did a great job with the migration FAQ. Customers are self-serving more."</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="card-icon">😊</span>Sentiment Breakdown</div>
+    </div>
+    <div style="margin-bottom:10px;font-size:13px;color:var(--cp-text-muted)">Based on 48 CSM survey responses this week</div>
+    <div class="sentiment-bar-wrap">
+      <div class="sent-pos" style="width:46%"></div>
+      <div class="sent-neu" style="width:29%"></div>
+      <div class="sent-neg" style="width:25%"></div>
+    </div>
+    <div class="sentiment-legend" style="margin-bottom:20px">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--cp-success)"></div><span>Positive 46%</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--cp-warning)"></div><span>Neutral 29%</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--cp-danger)"></div><span>Negative 25%</span></div>
+    </div>
+    <div style="border-top:1px solid var(--cp-border);padding-top:16px;">
+      <div style="font-size:12px;color:var(--cp-text-muted);margin-bottom:10px;">Score Trend (10-point scale)</div>
+      <div class="chart-wrap" style="height:120px"><canvas id="sentimentChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ───── SECTION 6: PUBLIC CHATTER ───── -->
+<div class="section-title">🌐 Public Chatter</div>
+<div class="main-grid">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="card-icon">🗣️</span>Recent Mentions</div>
+      <span class="card-badge badge-gray">Reddit · Twitter · Tech Community</span>
+    </div>
+    <div class="chatter-row">
+      <div class="chatter-platform">Reddit</div>
+      <div class="chatter-quote">"Finally migrated to Purview DLP — took ~20 min for 50 policies. Actually not bad."</div>
+      <div class="chatter-sentiment">😊</div>
+    </div>
+    <div class="chatter-row">
+      <div class="chatter-platform">Twitter/X</div>
+      <div class="chatter-quote">"Why is Microsoft forcing DLP migration with such a short window? 90 days is not enough for enterprise."</div>
+      <div class="chatter-sentiment">😠</div>
+    </div>
+    <div class="chatter-row">
+      <div class="chatter-platform">Tech Comm</div>
+      <div class="chatter-quote">"Migration tool works but the policy parity report is confusing. Needs better UX."</div>
+      <div class="chatter-sentiment">😐</div>
+    </div>
+    <div class="chatter-row">
+      <div class="chatter-platform">Reddit</div>
+      <div class="chatter-quote">"Anyone else seeing Endpoint DLP rules not carrying over correctly? Filing ICM now."</div>
+      <div class="chatter-sentiment">😠</div>
+    </div>
+    <div class="chatter-row">
+      <div class="chatter-platform">Twitter/X</div>
+      <div class="chatter-quote">"Purview DLP UI is way cleaner than the old compliance center. Good move Microsoft."</div>
+      <div class="chatter-sentiment">😊</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="card-icon">📊</span>Chatter Volume &amp; Sentiment</div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="chatterChart"></canvas>
+    </div>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--cp-border);">
+      <div style="display:flex;justify-content:space-between;font-size:13px;">
+        <span style="color:var(--cp-text-muted)">Total mentions this week</span>
+        <strong>284</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:4px;">
+        <span style="color:var(--cp-text-muted)">Overall sentiment</span>
+        <span class="card-badge badge-yellow">Mixed (51% positive)</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ───── SECTION 7: BLOCKERS ───── -->
+<div class="section-title">🚧 Migration Blockers Tracker</div>
+<div class="main-grid-3">
+  <div class="card" style="grid-column: span 2">
+    <div class="card-header">
+      <div class="card-title"><span class="card-icon">🔒</span>Top Reasons Customers Are Blocked</div>
+      <span class="card-badge badge-red">~900 customers blocked</span>
+    </div>
+    <div class="blocker-row">
+      <div class="blocker-count">312</div>
+      <div class="blocker-info">
+        <div class="blocker-label">GCC / Gov eligibility check failing</div>
+        <div class="blocker-sub">Migration tool incorrectly blocking GCC tenants — engineering fix in progress</div>
+      </div>
+      <span class="card-badge badge-red blocker-status">Active Bug</span>
+    </div>
+    <div class="blocker-row">
+      <div class="blocker-count">218</div>
+      <div class="blocker-info">
+        <div class="blocker-label">Waiting for "dry-run / preview" feature</div>
+        <div class="blocker-sub">Enterprise customers unwilling to migrate without a preview mode — on roadmap Q2</div>
+      </div>
+      <span class="card-badge badge-yellow blocker-status">Roadmap</span>
+    </div>
+    <div class="blocker-row">
+      <div class="blocker-count">187</div>
+      <div class="blocker-info">
+        <div class="blocker-label">Large tenant timeouts (&gt;500 policies)</div>
+        <div class="blocker-sub">Migration tool hitting timeout for tenants with large policy sets — perf fix targeted this sprint</div>
+      </div>
+      <span class="card-badge badge-red blocker-status">Active Bug</span>
+    </div>
+    <div class="blocker-row">
+      <div class="blocker-count">104</div>
+      <div class="blocker-info">
+        <div class="blocker-label">Licensing dependency — Purview not licensed</div>
+        <div class="blocker-sub">Customers on legacy SKUs not entitled to Purview DLP — need licensing team alignment</div>
+      </div>
+      <span class="card-badge badge-blue blocker-status">Dependency</span>
+    </div>
+    <div class="blocker-row">
+      <div class="blocker-count">79</div>
+      <div class="blocker-info">
+        <div class="blocker-label">Policy parity gaps (Teams DLP)</div>
+        <div class="blocker-sub">Customers with Teams-specific DLP rules holding off until parity is confirmed</div>
+      </div>
+      <span class="card-badge badge-yellow blocker-status">In Progress</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="card-icon">📆</span>WoW Summary</div>
+    </div>
+    <table class="wow-table">
+      <thead>
+        <tr><th>Metric</th><th>W1</th><th>W2</th><th>W3</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Migrated</td><td>421</td><td>972</td><td>1,284</td></tr>
+        <tr><td>ICMs Open</td><td>8</td><td>22</td><td>27</td></tr>
+        <tr><td>Banner CTR</td><td>5.1%</td><td>7.1%</td><td>8.2%</td></tr>
+        <tr><td>Sentiment</td><td>7.2</td><td>6.7</td><td>6.4</td></tr>
+        <tr><td>Blockers</td><td>210</td><td>640</td><td>900</td></tr>
+      </tbody>
+    </table>
+    <div style="margin-top:16px;padding:12px;background:var(--cp-accent-soft);border-radius:10px;font-size:13px;border-left:3px solid var(--cp-accent)">
+      <strong>Action Item:</strong> ICM count growing faster than migration velocity — escalation threshold review needed.
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div style="text-align:center;padding:32px;font-size:12px;color:var(--cp-text-muted)">
+  DLP Migration Stakeholder Dashboard · Weekly Cadence · All Teams<br/>
+  <em>All data shown is illustrative. Replace with live signals upon approval.</em>
+</div>
+
+<script>
+  // Date
+  document.getElementById('today-date').textContent = new Date().toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'});
+
+  function getColor(varName) {
+    return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+  }
+
+  function toggleTheme() {
+    const html = document.documentElement;
+    const current = html.getAttribute('data-theme');
+    html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+    setTimeout(initCharts, 50);
+  }
+
+  function initCharts() {
+    const accent = getColor('--cp-accent');
+    const success = getColor('--cp-success');
+    const warning = getColor('--cp-warning');
+    const danger = getColor('--cp-danger');
+    const link = getColor('--cp-link');
+    const border = getColor('--cp-border');
+    const textMuted = getColor('--cp-text-muted');
+    const surface = getColor('--cp-surface');
+
+    Chart.defaults.color = textMuted;
+    Chart.defaults.borderColor = border;
+
+    const weeks = ['Week 1', 'Week 2', 'Week 3'];
+
+    // Destroy old charts
+    ['velocityChart','funnelTrendChart','icmChart','sentimentChart','chatterChart'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el._chartInstance) el._chartInstance.destroy();
+    });
+
+    // Velocity Chart
+    const vc = document.getElementById('velocityChart');
+    vc._chartInstance = new Chart(vc, {
+      type: 'bar',
+      data: {
+        labels: weeks,
+        datasets: [
+          { label: 'New Migrations', data: [421, 551, 312], backgroundColor: accent, borderRadius: 6 },
+          { label: 'Cumulative', data: [421, 972, 1284], type: 'line', borderColor: success, backgroundColor: 'transparent', pointBackgroundColor: success, tension: 0.4, yAxisID: 'y1' }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12 } } },
+        scales: {
+          y: { grid: { color: border }, ticks: { color: textMuted } },
+          y1: { position: 'right', grid: { drawOnChartArea: false }, ticks: { color: textMuted } }
+        }
+      }
+    });
+
+    // Funnel Trend
+    const ft = document.getElementById('funnelTrendChart');
+    ft._chartInstance = new Chart(ft, {
+      type: 'line',
+      data: {
+        labels: weeks,
+        datasets: [
+          { label: 'Banner Seen', data: [18200, 35100, 41200], borderColor: link, backgroundColor: 'transparent', tension: 0.4, pointBackgroundColor: link },
+          { label: 'Tool Clicked', data: [928, 2490, 3378], borderColor: accent, backgroundColor: 'transparent', tension: 0.4, pointBackgroundColor: accent },
+          { label: 'Migrated', data: [421, 972, 1284], borderColor: success, backgroundColor: 'transparent', tension: 0.4, pointBackgroundColor: success }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12 } } },
+        scales: { y: { grid: { color: border }, ticks: { color: textMuted } }, x: { grid: { color: border }, ticks: { color: textMuted } } }
+      }
+    });
+
+    // ICM Chart
+    const ic = document.getElementById('icmChart');
+    ic._chartInstance = new Chart(ic, {
+      type: 'bar',
+      data: {
+        labels: weeks,
+        datasets: [
+          { label: 'Sev 1', data: [1, 2, 3], backgroundColor: danger, borderRadius: 4 },
+          { label: 'Sev 2', data: [3, 9, 11], backgroundColor: warning, borderRadius: 4 },
+          { label: 'Sev 3', data: [4, 11, 13], backgroundColor: link, borderRadius: 4 }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12 } } },
+        scales: { x: { stacked: true, grid: { color: border }, ticks: { color: textMuted } }, y: { stacked: true, grid: { color: border }, ticks: { color: textMuted } } }
+      }
+    });
+
+    // Sentiment Trend
+    const sc = document.getElementById('sentimentChart');
+    sc._chartInstance = new Chart(sc, {
+      type: 'line',
+      data: {
+        labels: weeks,
+        datasets: [{ label: 'Field Score', data: [7.2, 6.7, 6.4], borderColor: accent, backgroundColor: 'transparent', tension: 0.4, pointBackgroundColor: accent, pointRadius: 5 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+        scales: { y: { min: 0, max: 10, grid: { color: border }, ticks: { color: textMuted } }, x: { grid: { color: border }, ticks: { color: textMuted } } }
+      }
+    });
+
+    // Chatter Chart
+    const cc = document.getElementById('chatterChart');
+    cc._chartInstance = new Chart(cc, {
+      type: 'bar',
+      data: {
+        labels: weeks,
+        datasets: [
+          { label: 'Positive', data: [58, 112, 145], backgroundColor: success, borderRadius: 4 },
+          { label: 'Neutral', data: [23, 47, 69], backgroundColor: warning, borderRadius: 4 },
+          { label: 'Negative', data: [19, 52, 70], backgroundColor: danger, borderRadius: 4 }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12 } } },
+        scales: { x: { stacked: true, grid: { color: border }, ticks: { color: textMuted } }, y: { stacked: true, grid: { color: border }, ticks: { color: textMuted } } }
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', initCharts);
+</script>
+</body>
+</html>
